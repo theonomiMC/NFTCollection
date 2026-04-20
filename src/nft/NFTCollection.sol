@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.24;
 
-import "erc721a/ERC721A.sol";
+import {ERC721A} from "erc721a/ERC721A.sol";
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
@@ -36,7 +36,7 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     /// @notice URI returned before reveal
     string public hiddenURI;
     /// @dev Base URI for revealed tokens
-    string private _baseTokenURI;
+    string private _baseTokenUri;
 
     /// @notice Whether metadata is revealed
     bool public isRevealed = false;
@@ -88,6 +88,8 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     error AlreadyRevealed();
     /// @notice Thrown if royalty fee is too high
     error RoyaltyTooHigh();
+    /// @notice Thrown if tokenId not exists
+    error TokenNotExists();
 
     /*//////////////////////////////////////////////////////////////
                             CONSTRUCTOR
@@ -100,7 +102,7 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     /// @param _whitelistPrice Price per NFT in whitelist phase
     /// @param _publicPrice Price per NFT in public phase
     /// @param _maxMint Max NFTs per wallet
-    /// @param _hiddenURI Placeholder metadata URI before reveal
+    /// @param _hiddenUri Placeholder metadata URI before reveal
     /// @param _royaltyRecipient Address receiving royalties and withdrawals
     /// @param _royaltyFee Royalty fee in basis points (e.g., 500 = 5%)
     constructor(
@@ -110,21 +112,21 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
         uint256 _whitelistPrice,
         uint256 _publicPrice,
         uint256 _maxMint,
-        string memory _hiddenURI,
+        string memory _hiddenUri,
         address _royaltyRecipient,
         uint96 _royaltyFee // e.g., 500 for 5%
     ) ERC721A(_name, _symbol) Ownable(msg.sender) {
         if (_royaltyRecipient == address(0)) revert InvalidAddress();
         if (_royaltyFee > 1000) revert RoyaltyTooHigh();
         if (_maxSupply == 0) revert InvalidAmount();
-        if (bytes(_hiddenURI).length == 0) revert InvalidURI();
+        if (bytes(_hiddenUri).length == 0) revert InvalidURI();
         if (_maxMint == 0) revert InvalidAmount();
 
         maxSupply = _maxSupply;
         whitelistMintCost = _whitelistPrice;
         publicMintCost = _publicPrice;
         maxMintPerAddress = _maxMint;
-        hiddenURI = _hiddenURI;
+        hiddenURI = _hiddenUri;
         recipient = _royaltyRecipient;
 
         _setDefaultRoyalty(_royaltyRecipient, _royaltyFee);
@@ -148,8 +150,8 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
                         INTERNAL HELPERS
     //////////////////////////////////////////////////////////////*/
     /// @dev Verifies whitelist membership using merkle proof
-    /// @param user Address to verify
-    /// @param proof Merkle proof
+    /// @param _user Address to verify
+    /// @param _proof Merkle proof
     /// @custom:reverts InvalidMerkleProof if proof is invalid
     function _verifyWhitelist(address _user, bytes32[] calldata _proof) internal view {
         bytes32 leaf = keccak256(abi.encodePacked(_user));
@@ -160,8 +162,8 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
 
     /// @dev Shared mint logic used by whitelist and public mint
     /// @param to Recipient address
-    /// @param quantity Number of NFTs to mint
-    /// @param cost Price per NFT
+    /// @param _quantity Number of NFTs to mint
+    /// @param _cost Price per NFT
     /// @custom:reverts InvalidAmount if quantity is zero or ETH is incorrect
     /// @custom:reverts InsufficientSupply if max supply exceeded
     /// @custom:reverts MintLimitExceeded if wallet limit exceeded
@@ -209,14 +211,14 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice Set new merkle root for whitelist
-    /// @param root New merkle root
+    /// @param _root New merkle root
     function setMerkleRoot(bytes32 _root) external onlyOwner {
         merkleRoot = _root;
         emit MerkleRootUpdated(_root);
     }
 
     /// @notice Set withdrawal recipient
-    /// @param newRecipient Address receiving funds
+    /// @param _newRecipient Address receiving funds
     function setRecipient(address _newRecipient) external onlyOwner {
         if (_newRecipient == address(0)) revert InvalidAddress();
         recipient = _newRecipient;
@@ -238,12 +240,12 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     function reveal(string calldata baseURI) external onlyOwner {
         if (isRevealed) revert AlreadyRevealed();
         if (bytes(baseURI).length == 0) revert InvalidURI();
-        _baseTokenURI = baseURI;
+        _baseTokenUri = baseURI;
         isRevealed = true;
     }
 
     /// @notice Withdraw all ETH to recipient
-    function withdraw() external onlyOwner {
+    function withdraw() external nonReentrant onlyOwner {
         (bool success,) = payable(recipient).call{value: address(this).balance}("");
         if (!success) revert TransferFailed();
     }
@@ -254,11 +256,11 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     /// @notice Returns metadata URI for a token
     /// @param tokenId Token ID
     function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
-        if (!_exists(tokenId)) revert("URIQueryForNonexistentToken");
+        if (!_exists(tokenId)) revert TokenNotExists();
 
         if (!isRevealed) return hiddenURI;
 
-        return string(abi.encodePacked(_baseTokenURI, tokenId.toString(), ".json"));
+        return string(abi.encodePacked(_baseTokenUri, tokenId.toString(), ".json"));
     }
 
     /*//////////////////////////////////////////////////////////////
