@@ -1,73 +1,112 @@
 # NFTCollection
 
-Gas-efficient NFT contract built with ERC721A.
+A Solidity project for an NFT collection and NFT staking system.
 
-## ✨ Features
+This repo currently contains:
 
-- Whitelist mint (Merkle proof)
+- an ERC721A-based NFT collection
+- a mintable ERC20 reward token interface/integration
+- an NFT staking contract with per-second reward distribution
+
+## Overview
+
+The project started as a gas-efficient NFT collection and was later extended with a staking module.
+
+The staking system is designed so that:
+
+- users stake NFTs into the staking contract
+- rewards accrue over time
+- rewards are distributed using accumulator-based accounting
+- users can claim rewards without iterating over all stakers
+
+## Contracts
+
+### NFTCollection
+Gas-efficient ERC721A NFT contract with:
+
+- whitelist mint using Merkle proof
+- public mint
+- max supply and per-wallet limits
+- reveal mechanism
+- royalties via ERC2981
+- pause control
+- secure ETH withdrawal
+
+### NFTStaking
+ERC721 staking contract with:
+
+- batch stake and unstake
+- per-second reward emissions
+- accumulator-based reward accounting
+- per-user staked token tracking
+- claimable reward settlement
+- role-based reward rate updates
+
+## NFT Collection Features
+
+- Whitelist mint
 - Public mint
-- Max supply and per-wallet limits
-- Reveal mechanism (hidden → real metadata)
-- Royalties (ERC2981)
-- Pause control
-- Secure ETH withdrawal
+- Max supply cap
+- Wallet mint limits
+- Hidden metadata before reveal
+- Base URI reveal flow
+- Royalties
+- Pause support
+- Withdraw to recipient
 
----
+## Staking Design
 
-## 🧱 Tech Stack
+Each staked NFT counts as 1 staking unit.
 
-- Solidity ^0.8.20  
-- ERC721A  
-- OpenZeppelin  
+Rewards are tracked using these core variables:
 
----
+- `accRewardPerShare`: cumulative reward per staked NFT
+- `rewardCheckpoint`: user checkpoint used to avoid double counting
+- `pendingRewards`: rewards already earned but not yet claimed
+- `balanceOf`: number of NFTs staked by a user
+- `totalStaked`: total NFTs staked globally
 
-## ⚙️ How It Works
+This design avoids looping over all users and supports multiple stakers efficiently.
 
-### Minting
+## How Staking Works
 
-- **Whitelist phase**: only approved addresses can mint using a Merkle proof  
-- **Public phase**: open minting for everyone  
+### Stake
+When a user stakes NFTs:
 
-Both enforce:
-- Correct ETH payment
-- Max supply limit
-- Per-wallet mint cap  
+1. the pool is updated
+2. the user's rewards are settled under their old balance
+3. NFTs are transferred into the staking contract
+4. user balance and total staked are updated
+5. the user's reward checkpoint is updated
 
----
+### Unstake
+When a user unstakes NFTs:
 
-### Reveal
+1. the pool is updated
+2. the user's rewards are settled
+3. ownership bookkeeping is cleared
+4. balances are reduced
+5. NFTs are transferred back to the user
 
-- Before reveal → all tokens return `hiddenURI`  
-- After reveal → tokens use `baseURI + tokenId + ".json"`  
+### Claim
+When a user claims:
 
----
+1. the pool is updated
+2. the user's rewards are settled
+3. pending rewards are minted to the user
 
-### Withdraw
+## Tech Stack
 
-- Only owner can withdraw funds  
-- ETH is sent to the `recipient` address  
+- Solidity ^0.8.24
+- ERC721A
+- OpenZeppelin
+- Foundry
 
----
-
-## 🔑 Key Variables
-
-| Variable | Description |
-|--------|------------|
-| `maxSupply` | Maximum NFTs |
-| `whitelistMintCost` | Whitelist mint price |
-| `publicMintCost` | Public mint price |
-| `maxMintPerAddress` | Max NFTs per wallet |
-| `merkleRoot` | Whitelist root |
-| `recipient` | Withdrawal address |
-
----
-
-## ▶️ How to Run
-
-### 1. Clone repo
+## Project Structure
 
 ```bash
-git clone https://github.com/theonomiMC/NFTCollection.git
-cd NFTCollection
-```
+src/
+  NFTCollection.sol
+  NFTStaking.sol
+  GovernanceToken.sol
+  interfaces/
