@@ -1,112 +1,202 @@
-# NFTCollection
+# NFT Staking Protocol
 
-A Solidity project for an NFT collection and NFT staking system.
+A production-oriented Solidity project implementing an NFT collection and a staking-based reward distribution system.
 
-This repo currently contains:
+## 📌 Overview
 
-- an ERC721A-based NFT collection
-- a mintable ERC20 reward token interface/integration
-- an NFT staking contract with per-second reward distribution
+This project consists of three core components:
 
-## Overview
+- **ERC721A NFT Collection**
+- **NFT Staking Contract**
+- **ERC20 Reward Token**
 
-The project started as a gas-efficient NFT collection and was later extended with a staking module.
+The system allows users to stake NFTs and earn rewards over time using a gas-efficient accumulator-based model.
 
-The staking system is designed so that:
+---
 
-- users stake NFTs into the staking contract
-- rewards accrue over time
-- rewards are distributed using accumulator-based accounting
-- users can claim rewards without iterating over all stakers
-
-## Contracts
+## 🧱 Contracts
 
 ### NFTCollection
-Gas-efficient ERC721A NFT contract with:
 
-- whitelist mint using Merkle proof
-- public mint
-- max supply and per-wallet limits
-- reveal mechanism
-- royalties via ERC2981
-- pause control
-- secure ETH withdrawal
+Gas-efficient ERC721A-based NFT contract.
+
+**Features:**
+- Whitelist mint (Merkle proof)
+- Public mint
+- Max supply enforcement
+- Per-wallet mint limits
+- Reveal mechanism (hidden → baseURI + tokenId)
+- ERC2981 royalties
+- Pause control
+- Secure ETH withdrawal
+
+---
 
 ### NFTStaking
-ERC721 staking contract with:
 
-- batch stake and unstake
-- per-second reward emissions
-- accumulator-based reward accounting
-- per-user staked token tracking
-- claimable reward settlement
-- role-based reward rate updates
+Core staking contract responsible for reward distribution.
 
-## NFT Collection Features
+**Features:**
+- Stake / unstake NFTs (batch supported)
+- Per-second reward emission
+- Accumulator-based reward accounting (O(1))
+- Per-user staking tracking
+- Claimable rewards
+- Role-based reward rate updates
 
-- Whitelist mint
-- Public mint
-- Max supply cap
-- Wallet mint limits
-- Hidden metadata before reveal
-- Base URI reveal flow
-- Royalties
-- Pause support
-- Withdraw to recipient
+---
 
-## Staking Design
+### GovernanceToken
 
-Each staked NFT counts as 1 staking unit.
+ERC20 reward token with:
+- capped max supply
+- role-based minting (`MINTER_ROLE`)
+- mint controlled by staking contract
 
-Rewards are tracked using these core variables:
+---
 
-- `accRewardPerShare`: cumulative reward per staked NFT
-- `rewardCheckpoint`: user checkpoint used to avoid double counting
-- `pendingRewards`: rewards already earned but not yet claimed
-- `balanceOf`: number of NFTs staked by a user
-- `totalStaked`: total NFTs staked globally
+## ⚙️ Reward Model
 
-This design avoids looping over all users and supports multiple stakers efficiently.
+Rewards are distributed using a cumulative index:
 
-## How Staking Works
+- `accRewardPerShare` → total rewards per staked NFT
+- `rewardCheckpoint` → user-specific accounting checkpoint
+- `pendingRewards` → stored rewards not yet claimed
+
+Core formula:
+```
+earned = pendingRewards + (balance * accRewardPerShare - rewardCheckpoint)
+```
+
+
+This design:
+- avoids looping over users
+- scales efficiently with many stakers
+- mirrors patterns used in production DeFi systems
+
+---
+
+## 🔄 Staking Lifecycle
 
 ### Stake
-When a user stakes NFTs:
 
-1. the pool is updated
-2. the user's rewards are settled under their old balance
-3. NFTs are transferred into the staking contract
-4. user balance and total staked are updated
-5. the user's reward checkpoint is updated
+1. update pool state
+2. settle user rewards
+3. transfer NFTs to contract
+4. update balances
+5. update reward checkpoint
+
+---
 
 ### Unstake
-When a user unstakes NFTs:
 
-1. the pool is updated
-2. the user's rewards are settled
-3. ownership bookkeeping is cleared
-4. balances are reduced
-5. NFTs are transferred back to the user
+1. update pool
+2. settle rewards
+3. update balances
+4. transfer NFTs back to user
+
+---
 
 ### Claim
-When a user claims:
 
-1. the pool is updated
-2. the user's rewards are settled
-3. pending rewards are minted to the user
+1. update pool
+2. settle rewards
+3. mint ERC20 rewards to user
 
-## Tech Stack
+---
 
-- Solidity ^0.8.24
-- ERC721A
-- OpenZeppelin
-- Foundry
+## 🧪 Testing
 
-## Project Structure
+### Unit Tests
+
+Covers:
+
+- NFT minting, limits, and pricing
+- whitelist logic
+- staking flows (stake / unstake / claim)
+- reward distribution correctness
+- access control and failure cases
+
+---
+
+### Invariant Testing
+
+The system is tested under randomized sequences of actions.
+
+#### NFTCollection invariants:
+
+- `totalSupply` consistency
+- user balances never exceed wallet limits
+- ETH accounting (including forced ETH scenarios)
+- tokenURI correctness before and after reveal
+
+#### NFTStaking invariants:
+
+- `totalStaked == sum(balanceOf(users))`
+- mapping ↔ array consistency
+- NFT custody correctness
+- no duplicate tokens per user
+- reward accounting correctness
+
+---
+
+## 📊 Coverage
+
+| Contract            | Coverage |
+|-------------------|---------|
+| NFTCollection      | 100%    |
+| GovernanceToken    | 100%    |
+| NFTStaking         | ~99% lines / ~94% branches |
+
+---
+
+## 🔒 Security Considerations
+
+- Reentrancy protection (`ReentrancyGuard`)
+- Direct NFT transfer attack prevented (`operator` check in `onERC721Received`)
+- Safe reward accounting (no double counting)
+- Role-based access control (`AccessControl`)
+- ETH withdrawal handles unexpected ETH transfers
+- Failure handling for rejecting recipients
+
+---
+
+## 🧠 Design Notes
+
+- Each NFT represents 1 staking unit
+- Reward distribution is time-based (`rewardPerSecond`)
+- System avoids loops over users (gas-efficient)
+- Uses patterns similar to MasterChef-style contracts
+
+---
+
+## 📁 Project Structure
+```
+src/
+  nft/
+    NFTCollection.sol
+  staking/
+    NFTStaking.sol
+  token/
+    GovernanceToken.sol
+  interfaces/
+```
+
+## 🚀 How to Run
 
 ```bash
-src/
-  NFTCollection.sol
-  NFTStaking.sol
-  GovernanceToken.sol
-  interfaces/
+git clone https://github.com/theonomiMC/NFTCollection.git
+cd NFTCollection
+
+forge install
+forge build
+forge test
+forge coverage
+```
+
+## 🔮 Future Improvements
+- Multisig admin control
+- Emergency withdraw for staking
+- Batch size limits (gas protection)
+- Integration tests (NFT ↔ staking ↔ rewards)
+- Frontend integration

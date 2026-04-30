@@ -19,6 +19,7 @@ error NFTStaking_EmptyArray();
 error NFTStaking_NoReward();
 error NFTStaking_AlreadyStaked();
 error NFTStaking_InvalidNFT();
+error NFTStaking_DirectTransferNotAllowed();
 
 contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
     IERC721 public immutable nftCollection;
@@ -47,11 +48,16 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
     event Claimed(address indexed user, uint256 rewards);
 
     constructor(
+        address _admin,
         address _nftCollection,
         address _rewardToken,
         uint256 _rewardsPerSecond
     ) {
-        if (_nftCollection == address(0) || _rewardToken == address(0)) {
+        if (
+            _admin == address(0) ||
+            _nftCollection == address(0) ||
+            _rewardToken == address(0)
+        ) {
             revert NFTStaking_InvalidAddress();
         }
         if (_rewardsPerSecond == 0) revert NFTStaking_InvalidAmount();
@@ -61,8 +67,8 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
         rewardsPerSecond = _rewardsPerSecond;
         lastUpdateTime = block.timestamp;
 
-        _grantRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _grantRole(REWARD_MANAGER_ROLE, msg.sender);
+        _grantRole(DEFAULT_ADMIN_ROLE, _admin);
+        _grantRole(REWARD_MANAGER_ROLE, _admin);
     }
 
     function stake(uint256[] calldata tokenIds) external nonReentrant {
@@ -235,13 +241,16 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
     }
 
     function onERC721Received(
-        address,
+        address operator,
         address,
         uint256,
         bytes calldata
     ) external view override returns (bytes4) {
         if (msg.sender != address(nftCollection)) {
             revert NFTStaking_InvalidNFT();
+        }
+        if (operator != address(this)) {
+            revert NFTStaking_DirectTransferNotAllowed();
         }
         return IERC721Receiver.onERC721Received.selector;
     }
