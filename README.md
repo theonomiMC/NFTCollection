@@ -1,6 +1,17 @@
 # NFT Staking Protocol
+![Foundry](https://img.shields.io/badge/Built_with-Foundry-FF8000.svg?style=flat-square)
+![Coverage](https://img.shields.io/badge/Coverage-98%25-brightgreen.svg?style=flat-square)
+![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg?style=flat-square)
+
+
+## 🟢 Live Testnet Deployments (Sepolia)
 
 A production-oriented Solidity project implementing an NFT collection and a staking-based reward distribution system.
+
+*   **NFTCollection:** [`0xEE2BC4Bea4F5193EB12947a5E4F7CC9D3d26fdBf`](https://sepolia.etherscan.io/address/0xEE2BC4Bea4F5193EB12947a5E4F7CC9D3d26fdBf#code)
+*   **GovernanceToken:** [`0xad6D988db1F9b695276080BF24D95CB2F7A8c7EA`](https://sepolia.etherscan.io/address/0xad6D988db1F9b695276080BF24D95CB2F7A8c7EA#code)
+*   **NFTStaking:** [`0x99b8522Fd6c282f34E5B5af57B18044C88d12c37`](https://sepolia.etherscan.io/address/0x99b8522Fd6c282f34E5B5af57B18044C88d12c37#code)
+
 
 ## 📌 Overview
 
@@ -65,7 +76,7 @@ Rewards are distributed using a cumulative index:
 
 Core formula:
 ```
-earned = pendingRewards + (balance * accRewardPerShare - rewardCheckpoint)
+earned = pendingRewards + ((balance * accRewardPerShare) / PRECISION - rewardCheckpoint)
 ```
 
 
@@ -209,7 +220,14 @@ src/
     GovernanceToken.sol
   interfaces/
 ```
+---
+### Deployment Notes
 
+- Contracts are verified on Etherscan
+- Admin roles are intended to be transferred to a multisig wallet
+- Current deployment may still be controlled by a deployer EOA
+
+---
 ## 🚀 How to Run
 
 ```bash

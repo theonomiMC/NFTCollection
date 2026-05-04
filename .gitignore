@@ -1,6 +1,11 @@
 # Compiler files
 cache/
 out/
+broadcast/
+
+# Coverage
+lcov.info
+coverage/
 
 # Ignores development broadcast logs
 !/broadcast
@@ -12,3 +17,14 @@ docs/
 
 # Dotenv file
 .env
+.env.*
+
+# VSCode — keep extensions, ignore personal settings
+.vscode/*
+!.vscode/extensions.json
+
+# OS
+.DS_Store
+Thumbs.db
+
+.gas-snapshot
