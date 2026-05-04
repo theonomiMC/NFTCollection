@@ -29,10 +29,7 @@ contract GovernanceToken is ERC20, AccessControl {
     /// @dev Sets the maximum supply and assigns admin role to `_admin`.
     /// @param maxSupply Maximum total supply of the token.
     /// @param _admin Address that receives `DEFAULT_ADMIN_ROLE`.
-    constructor(
-        uint256 maxSupply,
-        address _admin
-    ) ERC20("Governance Token", "GOV") {
+    constructor(uint256 maxSupply, address _admin) ERC20("Governance Token", "GOV") {
         if (maxSupply == 0) revert Gov_InvalidAmount();
         if (_admin == address(0)) revert Gov_InvalidAddress();
 
@@ -47,8 +44,9 @@ contract GovernanceToken is ERC20, AccessControl {
     /// @param amount Number of tokens to mint.
     function mint(address to, uint256 amount) external onlyRole(MINTER_ROLE) {
         if (to == address(0)) revert Gov_InvalidAddress();
-        if (totalSupply() + amount > MAX_SUPPLY)
+        if (totalSupply() + amount > MAX_SUPPLY) {
             revert Gov_InsufficientSupply();
+        }
         _mint(to, amount);
     }
 }
