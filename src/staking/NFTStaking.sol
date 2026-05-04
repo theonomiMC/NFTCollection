@@ -3,13 +3,9 @@ pragma solidity ^0.8.24;
 
 import {IMintableERC20} from "../interfaces/ImintableERC20.sol";
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {
-    IERC721Receiver
-} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
+import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import {AccessControl} from "@openzeppelin/contracts/access/AccessControl.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /*//////////////////////////////////////////////////////////////
                              CUSTOM ERRORS
@@ -58,8 +54,7 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
     IMintableERC20 public immutable rewardToken;
 
     /// @notice Role allowed to update the reward emission rate
-    bytes32 public constant REWARD_MANAGER_ROLE =
-        keccak256("REWARD_MANAGER_ROLE");
+    bytes32 public constant REWARD_MANAGER_ROLE = keccak256("REWARD_MANAGER_ROLE");
 
     /// @notice Precision factor used for reward-per-share accounting
     uint256 public constant PRECISION = 1e18;
@@ -132,17 +127,8 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
     /// @param _nftCollection ERC721 collection accepted for staking.
     /// @param _rewardToken ERC20 reward token minted on claim.
     /// @param _rewardsPerSecond Initial reward token emission rate per second.
-    constructor(
-        address _admin,
-        address _nftCollection,
-        address _rewardToken,
-        uint256 _rewardsPerSecond
-    ) {
-        if (
-            _admin == address(0) ||
-            _nftCollection == address(0) ||
-            _rewardToken == address(0)
-        ) {
+    constructor(address _admin, address _nftCollection, address _rewardToken, uint256 _rewardsPerSecond) {
+        if (_admin == address(0) || _nftCollection == address(0) || _rewardToken == address(0)) {
             revert NFTStaking_InvalidAddress();
         }
         if (_rewardsPerSecond == 0) revert NFTStaking_InvalidAmount();
@@ -170,7 +156,7 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
         _updatePool();
         _settle(msg.sender);
 
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len;) {
             uint256 tokenId = tokenIds[i];
 
             // verify msg.sender owns token on NFT contract
@@ -200,9 +186,7 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
         }
         balanceOf[msg.sender] += len;
         totalStaked += len;
-        rewardCheckpoint[msg.sender] =
-            (balanceOf[msg.sender] * accRewardPerShare) /
-            PRECISION;
+        rewardCheckpoint[msg.sender] = (balanceOf[msg.sender] * accRewardPerShare) / PRECISION;
     }
 
     /// @notice Unstakes one or more NFTs and returns them to the caller.
@@ -219,7 +203,7 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
         _updatePool();
         _settle(msg.sender);
 
-        for (uint256 i; i < len; ) {
+        for (uint256 i; i < len;) {
             uint256 tokenId = tokenIds[i];
 
             if (stakerOf[tokenId] != msg.sender) revert NFTStaking_NotOwner();
@@ -236,11 +220,9 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
 
         balanceOf[msg.sender] -= len;
         totalStaked -= len;
-        rewardCheckpoint[msg.sender] =
-            (balanceOf[msg.sender] * accRewardPerShare) /
-            PRECISION;
+        rewardCheckpoint[msg.sender] = (balanceOf[msg.sender] * accRewardPerShare) / PRECISION;
 
-        for (uint256 i = 0; i < len; ) {
+        for (uint256 i = 0; i < len;) {
             uint256 tokenId = tokenIds[i];
             nftCollection.safeTransferFrom(address(this), msg.sender, tokenId);
 
@@ -294,9 +276,7 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
         if (owed > 0) {
             pendingRewards[user] += owed;
         }
-        rewardCheckpoint[user] =
-            (balanceOf[user] * accRewardPerShare) /
-            PRECISION;
+        rewardCheckpoint[user] = (balanceOf[user] * accRewardPerShare) / PRECISION;
     }
 
     /// @dev Adds `tokenId` to `user`'s staked token list and stores its array index.
@@ -329,9 +309,7 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
     /// Updates global reward accounting before changing the rate so the new rate
     /// only applies to future rewards.
     /// @param _newRate New reward token emission rate per second.
-    function setRewardPerSecond(
-        uint256 _newRate
-    ) external onlyRole(REWARD_MANAGER_ROLE) {
+    function setRewardPerSecond(uint256 _newRate) external onlyRole(REWARD_MANAGER_ROLE) {
         if (_newRate == 0) revert NFTStaking_InvalidAmount();
 
         _updatePool();
@@ -366,9 +344,7 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
     /// @notice Returns all NFT token IDs currently staked by `user`.
     /// @param user Address to query.
     /// @return Array of staked NFT token IDs.
-    function stakedTokensOf(
-        address user
-    ) external view returns (uint256[] memory) {
+    function stakedTokensOf(address user) external view returns (uint256[] memory) {
         return userStakes[user];
     }
 
@@ -377,12 +353,12 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
     /// transfer was initiated by this contract during `stake`. Direct user transfers
     /// are rejected to prevent untracked NFTs from becoming stuck.
     /// @param operator Address that initiated the ERC721 transfer.
-    function onERC721Received(
-        address operator,
-        address,
-        uint256,
-        bytes calldata
-    ) external view override returns (bytes4) {
+    function onERC721Received(address operator, address, uint256, bytes calldata)
+        external
+        view
+        override
+        returns (bytes4)
+    {
         if (msg.sender != address(nftCollection)) {
             revert NFTStaking_InvalidNFT();
         }

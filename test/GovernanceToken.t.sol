@@ -12,7 +12,9 @@ import {
 contract GovernanceTokenTest is BaseTest {
     function test_InitialStates() public view {
         assertEq(rewardToken.MAX_SUPPLY(), GOV_MAX_SUPPLY);
-        assertTrue(rewardToken.hasRole(rewardToken.DEFAULT_ADMIN_ROLE(), multisig));
+        assertTrue(
+            rewardToken.hasRole(rewardToken.DEFAULT_ADMIN_ROLE(), multisig)
+        );
     }
 
     function test_Constructor_InvalidAdminAddress_Reverts() public {
@@ -32,6 +34,14 @@ contract GovernanceTokenTest is BaseTest {
         vm.expectRevert(Gov_InsufficientSupply.selector);
         rewardToken.mint(toko, GOV_MAX_SUPPLY + 1);
 
+        vm.stopPrank();
+    }
+    function test_mintToZeroAddress_Reverts() public {
+        vm.startPrank(multisig);
+        rewardToken.grantRole(rewardToken.MINTER_ROLE(), multisig);
+
+        vm.expectRevert(Gov_InvalidAddress.selector);
+        rewardToken.mint(address(0), 1 ether);
         vm.stopPrank();
     }
 

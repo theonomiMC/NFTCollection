@@ -351,7 +351,7 @@ contract NFTCollectionTest is BaseTest {
         assertEq(nft.tokenURI(tokenId), nft.hiddenURI());
     }
 
-    function test_TokenURI_OnNonExistingTokenIreadmd_Reverts() public {
+    function test_TokenURI_OnNonExistingTokenId_Reverts() public {
         uint256 tokenId = 111;
         vm.expectRevert(TokenNotExists.selector);
         nft.tokenURI(tokenId);

@@ -112,31 +112,36 @@ This design:
 Covers:
 
 - NFT minting, limits, and pricing
-- whitelist logic
-- staking flows (stake / unstake / claim)
-- reward distribution correctness
-- access control and failure cases
+- Whitelist logic
+- Staking flows (stake / unstake / claim)
+- Reward distribution correctness
+- Access control and failure cases
 
 ---
 
 ### Invariant Testing
 
-The system is tested under randomized sequences of actions.
+The system is tested under randomized sequences of actions to ensure state consistency.
 
 #### NFTCollection invariants:
 
 - `totalSupply` consistency
-- user balances never exceed wallet limits
+- User balances never exceed wallet limits
 - ETH accounting (including forced ETH scenarios)
-- tokenURI correctness before and after reveal
+- `tokenURI` correctness before and after reveal
 
 #### NFTStaking invariants:
 
 - `totalStaked == sum(balanceOf(users))`
-- mapping ↔ array consistency
+- Mapping ↔ array consistency
 - NFT custody correctness
-- no duplicate tokens per user
-- reward accounting correctness
+- No duplicate tokens per user
+- Reward accounting correctness
+
+## Additional Testing
+
+- Reentrancy tested using a malicious ERC721 mock
+- Callback attacks during `safeTransferFrom` are prevented
 
 ---
 
