@@ -14,12 +14,7 @@ contract StakingHandler is Test {
 
     uint256 public expectedTotalClaimed;
 
-    constructor(
-        NFTStaking _staking,
-        NFTCollection _nft,
-        address[] memory _users,
-        uint256[] memory _tokenIds
-    ) {
+    constructor(NFTStaking _staking, NFTCollection _nft, address[] memory _users, uint256[] memory _tokenIds) {
         staking = _staking;
         nft = _nft;
         users = _users;

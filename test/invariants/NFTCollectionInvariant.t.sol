@@ -89,6 +89,5 @@ contract NFTCollectionInvariantTest is StdInvariant, BaseTest {
     //         }
     //     }
     // }
-
 }
 

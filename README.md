@@ -156,8 +156,31 @@ The system is tested under randomized sequences of actions.
 - Direct NFT transfer attack prevented (`operator` check in `onERC721Received`)
 - Safe reward accounting (no double counting)
 - Role-based access control (`AccessControl`)
+- Production admin model designed around multisig ownership/control
 - ETH withdrawal handles unexpected ETH transfers
 - Failure handling for rejecting recipients
+
+---
+
+## 🔐 Production Admin Model
+
+Privileged roles are designed to be controlled by a multisig wallet in production.
+
+Recommended setup:
+
+- `NFTCollection` owner → multisig
+- `GovernanceToken` `DEFAULT_ADMIN_ROLE` → multisig
+- `GovernanceToken` `MINTER_ROLE` → `NFTStaking`
+- `NFTStaking` `DEFAULT_ADMIN_ROLE` → multisig
+- `NFTStaking` `REWARD_MANAGER_ROLE` → multisig
+
+User actions remain permissionless:
+
+- `stake`
+- `unstake`
+- `claim`
+
+This keeps user interactions immediate while admin actions require multisig approval.
 
 ---
 
@@ -195,8 +218,5 @@ forge coverage
 ```
 
 ## 🔮 Future Improvements
-- Multisig admin control
-- Emergency withdraw for staking
-- Batch size limits (gas protection)
 - Integration tests (NFT ↔ staking ↔ rewards)
 - Frontend integration

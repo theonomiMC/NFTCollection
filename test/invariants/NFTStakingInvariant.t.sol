@@ -24,12 +24,14 @@ contract NFTStakingInvariantTest is BaseTest {
 
         targetContract(address(handler));
     }
+
     function invariant_TotalStakedEqualsNFTBalance() public view {
         uint256 actualNFTBalance = nft.balanceOf(address(staking));
         uint256 totalStaked = staking.totalStaked();
 
         assertEq(totalStaked, actualNFTBalance);
     }
+
     function invariant_TotalStakedEqualsUserBalances() public view {
         uint256 sum;
         uint256 len = users.length;
@@ -39,6 +41,7 @@ contract NFTStakingInvariantTest is BaseTest {
 
         assertEq(staking.totalStaked(), sum);
     }
+
     function invariant_BalanceMatchesStakedTokenListLength() public view {
         uint256 len = users.length;
         for (uint256 i; i < len; i++) {
@@ -49,6 +52,7 @@ contract NFTStakingInvariantTest is BaseTest {
             assertEq(balance, stakedTokens.length);
         }
     }
+
     function invariant_StakedTokensAreOwnedByStakingContract() public view {
         uint256 len = users.length;
         for (uint256 i; i < len; i++) {
@@ -77,16 +81,12 @@ contract NFTStakingInvariantTest is BaseTest {
         }
     }
 
-    function invariant_RewardCheckpoint_NeverExceedsMaxAccumulated()
-        public
-        view
-    {
+    function invariant_RewardCheckpoint_NeverExceedsMaxAccumulated() public view {
         uint256 len = users.length;
         for (uint256 i; i < len; i++) {
             address user = users[i];
 
-            uint256 accumulated = (staking.balanceOf(user) *
-                staking.accRewardPerShare()) / staking.PRECISION();
+            uint256 accumulated = (staking.balanceOf(user) * staking.accRewardPerShare()) / staking.PRECISION();
 
             assertLe(staking.rewardCheckpoint(user), accumulated);
         }
@@ -105,7 +105,7 @@ contract NFTStakingInvariantTest is BaseTest {
             uint256 tokenLen = stakedTokens.length;
 
             for (uint256 j; j < tokenLen; j++) {
-                for (uint256 k=j+1; k < tokenLen; k++) {
+                for (uint256 k = j + 1; k < tokenLen; k++) {
                     if (k != j) {
                         assertNotEq(stakedTokens[k], stakedTokens[j]);
                     }
@@ -113,12 +113,13 @@ contract NFTStakingInvariantTest is BaseTest {
             }
         }
     }
+
     function invariant_UnstakedTokensAreNotOwnedByStakingContract() public view {
         uint256 len = tokenIds.length;
 
-        for(uint256 i; i<len; i++){
+        for (uint256 i; i < len; i++) {
             uint256 id = tokenIds[i];
-            if(staking.stakerOf(id) == address(0)){
+            if (staking.stakerOf(id) == address(0)) {
                 assertNotEq(nft.ownerOf(id), address(staking));
             }
         }

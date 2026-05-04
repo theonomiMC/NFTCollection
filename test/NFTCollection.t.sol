@@ -2,9 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {IERC721} from "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import {
-    IERC721Metadata
-} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
+import {IERC721Metadata} from "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import {IERC2981} from "@openzeppelin/contracts/interfaces/IERC2981.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {BaseTest} from "./base/BaseTest.t.sol";
@@ -25,7 +23,7 @@ import {
 
 contract NFTCollectionTest is BaseTest {
     function test_InitialStates() public view {
-        assertEq(nft.owner(), admin);
+        assertEq(nft.owner(), multisig);
 
         assertEq(nft.name(), "MyNFT");
         assertEq(nft.symbol(), "MNFT");
@@ -35,74 +33,37 @@ contract NFTCollectionTest is BaseTest {
         assertEq(nft.maxMintPerAddress(), 10);
 
         assertEq(nft.hiddenURI(), "ipfs://hidden.json");
-        assertEq(nft.recipient(), admin);
+        assertEq(nft.recipient(), multisig);
 
         assertEq(nft.isRevealed(), false);
     }
+
     // Constructor Reverts
     function test_Constructor_NoInitOwner_Reverts() public {
-        vm.prank(admin);
+        vm.prank(multisig);
         vm.expectRevert();
         new NFTCollection(
-            address(0),
-            "MyNFT",
-            "MNFT",
-            MAX_SUPPLY,
-            0.01 ether,
-            0.02 ether,
-            10,
-            "ipfs://hidden.json",
-            admin,
-            500
+            address(0), "MyNFT", "MNFT", MAX_SUPPLY, 0.01 ether, 0.02 ether, 10, "ipfs://hidden.json", multisig, 500
         );
     }
 
     function test_Constructor_NoRecipient_Reverts() public {
-        vm.prank(admin);
+        vm.prank(multisig);
         vm.expectRevert(InvalidAddress.selector);
         new NFTCollection(
-            admin,
-            "MyNFT",
-            "MNFT",
-            MAX_SUPPLY,
-            0.01 ether,
-            0.02 ether,
-            10,
-            "ipfs://hidden.json",
-            address(0),
-            500
+            multisig, "MyNFT", "MNFT", MAX_SUPPLY, 0.01 ether, 0.02 ether, 10, "ipfs://hidden.json", address(0), 500
         );
     }
 
     function test_Constructor_NoHiddenUri_Reverts() public {
         vm.expectRevert(InvalidURI.selector);
-        new NFTCollection(
-            admin,
-            "MyNFT",
-            "MNFT",
-            MAX_SUPPLY,
-            0.01 ether,
-            0.02 ether,
-            10,
-            "",
-            admin,
-            500
-        );
+        new NFTCollection(multisig, "MyNFT", "MNFT", MAX_SUPPLY, 0.01 ether, 0.02 ether, 10, "", multisig, 500);
     }
 
     function test_Constructor_ZeroMaxMintAmount_Reverts() public {
         vm.expectRevert(InvalidAmount.selector);
         new NFTCollection(
-            admin,
-            "MyNFT",
-            "MNFT",
-            MAX_SUPPLY,
-            0.01 ether,
-            0.02 ether,
-            0,
-            "ipfs://hidden.json",
-            admin,
-            500
+            multisig, "MyNFT", "MNFT", MAX_SUPPLY, 0.01 ether, 0.02 ether, 0, "ipfs://hidden.json", multisig, 500
         );
     }
 
@@ -110,34 +71,15 @@ contract NFTCollectionTest is BaseTest {
         vm.expectRevert(RoyaltyTooHigh.selector);
 
         new NFTCollection(
-            admin,
-            "MyNFT",
-            "MNFT",
-            MAX_SUPPLY,
-            0.01 ether,
-            0.02 ether,
-            10,
-            "ipfs://hidden.json",
-            admin,
-            1001
+            multisig, "MyNFT", "MNFT", MAX_SUPPLY, 0.01 ether, 0.02 ether, 10, "ipfs://hidden.json", multisig, 1001
         );
     }
 
     function test_Constructor_ZeroMaxSupply_Reverts() public {
         vm.expectRevert(InvalidAmount.selector);
-        new NFTCollection(
-            admin,
-            "MyNFT",
-            "MNFT",
-            0,
-            0.01 ether,
-            0.02 ether,
-            10,
-            "ipfs://hidden.json",
-            admin,
-            500
-        );
+        new NFTCollection(multisig, "MyNFT", "MNFT", 0, 0.01 ether, 0.02 ether, 10, "ipfs://hidden.json", multisig, 500);
     }
+
     // Mint
     function test_NFTMint_AssignsOwnership() public {
         uint256 balanceBefore = nft.balanceOf(toko);
@@ -156,7 +98,7 @@ contract NFTCollectionTest is BaseTest {
     }
 
     function test_PublicMint_NotActive_Reverts() public {
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.setPublicMintActive(false);
 
         vm.deal(toko, 1 ether);
@@ -165,6 +107,7 @@ contract NFTCollectionTest is BaseTest {
         vm.expectRevert(MintNotActive.selector);
         nft.publicMint{value: 0.02 ether}(1);
     }
+
     // Mint Reverts
     function test_PublicMint_ZeroAmount_Reverts() public {
         vm.deal(toko, 1 ether);
@@ -214,6 +157,7 @@ contract NFTCollectionTest is BaseTest {
         vm.expectRevert(InsufficientSupply.selector);
         nft.publicMint{value: 0.02 ether * (MAX_SUPPLY + 1)}(MAX_SUPPLY + 1);
     }
+
     // Whitelist mint
     function test_WhitelistMint_ValidProof_Succeeds() public {
         bytes32 leafToko = keccak256(abi.encodePacked(toko));
@@ -223,7 +167,7 @@ contract NFTCollectionTest is BaseTest {
             ? keccak256(abi.encodePacked(leafToko, leafNoa))
             : keccak256(abi.encodePacked(leafNoa, leafToko));
 
-        vm.startPrank(admin);
+        vm.startPrank(multisig);
         nft.setMerkleRoot(root);
         nft.setWhitelistActive(true);
         vm.stopPrank();
@@ -254,7 +198,7 @@ contract NFTCollectionTest is BaseTest {
     function test_WhitelistMint_InvalidProof_Reverts() public {
         bytes32 leafToko = keccak256(abi.encodePacked(toko));
 
-        vm.startPrank(admin);
+        vm.startPrank(multisig);
         nft.setMerkleRoot(leafToko);
         nft.setWhitelistActive(true);
         vm.stopPrank();
@@ -268,9 +212,9 @@ contract NFTCollectionTest is BaseTest {
         nft.whitelistMint{value: 0.01 ether}(1, invalidProof);
     }
 
-    // ADMIN
+    // multisig
     function test_Withdraw_AsAdmin_Succeeds() public {
-        uint256 adminBalanceBefore = admin.balance;
+        uint256 adminBalanceBefore = multisig.balance;
 
         vm.deal(toko, 1 ether);
         vm.prank(toko);
@@ -278,18 +222,18 @@ contract NFTCollectionTest is BaseTest {
 
         uint256 revenue = address(nft).balance;
 
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.withdraw();
 
         assertEq(address(nft).balance, 0);
-        assertEq(admin.balance, adminBalanceBefore + revenue);
+        assertEq(multisig.balance, adminBalanceBefore + revenue);
     }
 
     function test_SetPublicMintActive_AsAdmin() public {
         // it is active on basetest setup
         assertTrue(nft.publicMintActive());
 
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.setPublicMintActive(false);
 
         assertFalse(nft.publicMintActive());
@@ -298,7 +242,7 @@ contract NFTCollectionTest is BaseTest {
     function test_SetWhitelistActive_AsAdmin() public {
         assertFalse(nft.whitelistActive());
 
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.setWhitelistActive(true);
 
         assertTrue(nft.whitelistActive());
@@ -307,7 +251,7 @@ contract NFTCollectionTest is BaseTest {
     function test_SetMerkleRoot_AsAdmin_UpdatesState() public {
         bytes32 newRoot = bytes32(uint256(1234));
 
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.setMerkleRoot(newRoot);
 
         assertEq(nft.merkleRoot(), newRoot);
@@ -316,7 +260,7 @@ contract NFTCollectionTest is BaseTest {
     function test_Reveal_AsAdmin_UpdatesStateAndURI() public {
         string memory newBaseUri = "ipfs://revealed/";
 
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.reveal(newBaseUri);
         // minted to Toko in BaseTest's setUp
         uint256 tokenId = 1;
@@ -328,15 +272,15 @@ contract NFTCollectionTest is BaseTest {
     function test_setRecipient_AsAdmin() public {
         address newRecipient = makeAddr("new Recipient");
 
-        assertEq(nft.recipient(), admin);
+        assertEq(nft.recipient(), multisig);
 
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.setRecipient(newRecipient);
 
         assertEq(nft.recipient(), newRecipient);
     }
 
-    // Non-Admin Reverts
+    // Non-multisig Reverts
     function test_Withdraw_AsNonAdmin_Reverts() public {
         vm.prank(toko);
         vm.expectRevert();
@@ -380,40 +324,42 @@ contract NFTCollectionTest is BaseTest {
     function test_Reveal_AlreadyRevealed_Reverts() public {
         string memory newBaseUri = "ipfs://revealed/";
 
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.reveal(newBaseUri);
 
-        vm.prank(admin);
+        vm.prank(multisig);
         vm.expectRevert(AlreadyRevealed.selector);
         nft.reveal("ipfs://another/");
     }
 
     function test_EmptyBaseUri_Reveal_Reverts() public {
-        vm.prank(admin);
+        vm.prank(multisig);
         vm.expectRevert(InvalidURI.selector);
         nft.reveal("");
     }
 
     function test_setRecipient_EmptyAddress_Reverts() public {
-        vm.prank(admin);
+        vm.prank(multisig);
         vm.expectRevert(InvalidAddress.selector);
         nft.setRecipient(address(0));
     }
 
-    function test_TokenURI_BeforeReveal_ReturnsHiddenURI() public {
+    function test_TokenURI_BeforeReveal_ReturnsHiddenURI() public view {
         uint256 tokenId = 1;
 
         assertFalse(nft.isRevealed());
         assertEq(nft.tokenURI(tokenId), nft.hiddenURI());
     }
-    function test_TokenURI_OnNonExistingTokenId_Reverts() public {
+
+    function test_TokenURI_OnNonExistingTokenIreadmd_Reverts() public {
         uint256 tokenId = 111;
         vm.expectRevert(TokenNotExists.selector);
         nft.tokenURI(tokenId);
     }
+
     // PAUSE
     function test_PublicMint_Reverts_WhenPaused() public {
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.pause();
 
         vm.deal(toko, 1 ether);
@@ -428,15 +374,16 @@ contract NFTCollectionTest is BaseTest {
         vm.expectRevert();
         nft.pause();
     }
+
     function test_Unpause_AsAdmin_Succeeds() public {
-        vm.startPrank(admin);
+        vm.startPrank(multisig);
         nft.pause();
         nft.unpause(); // The missing function!
         vm.stopPrank();
 
         // Verify we can successfully mint again after unpausing
         vm.deal(toko, 1 ether);
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.setPublicMintActive(true);
 
         vm.prank(toko);
@@ -447,42 +394,33 @@ contract NFTCollectionTest is BaseTest {
     }
 
     function test_Unpause_AsNonAdmin_Reverts() public {
-        vm.prank(admin);
+        vm.prank(multisig);
         nft.pause();
 
         vm.prank(toko);
         vm.expectRevert(); // Expect standard Ownable revert
         nft.unpause();
     }
+
     // RoyaltiInfo
     function test_RoyaltyInfo_ReturnsCorrectRecipientAndAmount() public view {
         uint256 tokenId = 1;
         uint256 salePrice = 1 ether;
 
-        (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(
-            tokenId,
-            salePrice
-        );
+        (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(tokenId, salePrice);
 
-        assertEq(receiver, admin);
+        assertEq(receiver, multisig);
         assertEq(royaltyAmount, 0.05 ether);
     }
+
     function test_Constructor_RoyaltyExactlyMax_Succeeds() public {
-        vm.prank(admin);
+        vm.prank(multisig);
 
         new NFTCollection(
-            admin,
-            "MyNFT",
-            "MNFT",
-            MAX_SUPPLY,
-            0.01 ether,
-            0.02 ether,
-            10,
-            "ipfs://hidden.json",
-            admin,
-            1000
+            multisig, "MyNFT", "MNFT", MAX_SUPPLY, 0.01 ether, 0.02 ether, 10, "ipfs://hidden.json", multisig, 1000
         );
     }
+
     // View Functions
     function test_getTotalMinted() public view {
         assertEq(nft.totalMinted(), nft.totalSupply());
@@ -508,7 +446,7 @@ contract NFTCollectionTest is BaseTest {
     function test_TransferFail_Reverts() public {
         BadReceiver badContract = new BadReceiver();
 
-        vm.startPrank(admin);
+        vm.startPrank(multisig);
         nft.setRecipient(address(badContract));
         vm.expectRevert(TransferFailed.selector);
         nft.withdraw();

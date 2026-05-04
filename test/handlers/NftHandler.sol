@@ -14,17 +14,14 @@ contract NftHandler is Test {
     uint256 public expectedTotalSupply;
     uint256 public expectedBalance;
 
-    constructor(
-        NFTCollection _nft,
-        uint256 _maxSupply,
-        address[] memory _users
-    ) {
+    constructor(NFTCollection _nft, uint256 _maxSupply, address[] memory _users) {
         nft = _nft;
         MAX_SUPPLY = _maxSupply;
         users = _users;
         expectedTotalSupply = 6;
         expectedBalance = 0.12 ether;
     }
+
     function publicMint(uint256 userSeed, uint256 quantity) external {
         if (quantity == 0) return;
 
@@ -37,9 +34,7 @@ contract NftHandler is Test {
         uint256 availableSupply = MAX_SUPPLY - expectedTotalSupply;
         if (availableSupply == 0) return;
 
-        uint256 actualMax = maxAllowedNfts < availableSupply
-            ? maxAllowedNfts
-            : availableSupply;
+        uint256 actualMax = maxAllowedNfts < availableSupply ? maxAllowedNfts : availableSupply;
 
         quantity = bound(quantity, 1, actualMax);
         uint256 cost = nft.publicMintCost() * quantity;
@@ -55,7 +50,7 @@ contract NftHandler is Test {
 
     function reveal() external {
         if (nft.isRevealed()) return;
-        
+
         vm.prank(nft.owner());
         nft.reveal("ipfs://test/");
     }
@@ -71,12 +66,11 @@ contract NftHandler is Test {
 
     function forceSendEth(uint256 amount) external {
         amount = bound(amount, 1, 100 ether);
-  
+
         ForceETH attacker = new ForceETH();
         vm.deal(address(attacker), amount);
 
         attacker.forceSend(address(nft));
-    
     }
 
     function withdrawToRejectingRecipient() external {
@@ -89,14 +83,13 @@ contract NftHandler is Test {
         vm.startPrank(nft.owner());
         nft.setRecipient(address(attacker));
 
-        vm.expectRevert(); 
+        vm.expectRevert();
         nft.withdraw();
 
         nft.setRecipient(originalRecipient);
         vm.stopPrank();
     }
 }
-
 
 contract ForceETH {
     function forceSend(address target) external {

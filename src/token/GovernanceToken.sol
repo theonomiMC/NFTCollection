@@ -14,7 +14,7 @@ contract GovernanceToken is ERC20, AccessControl {
 
     constructor(uint256 maxSupply, address _admin) ERC20("Governance Token", "GOV") {
         if (maxSupply == 0) revert Gov_InvalidAmount();
-        if(_admin == address(0)) revert Gov_InvalidAddress();
+        if (_admin == address(0)) revert Gov_InvalidAddress();
 
         MAX_SUPPLY = maxSupply;
         _grantRole(DEFAULT_ADMIN_ROLE, _admin);

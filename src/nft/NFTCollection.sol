@@ -5,42 +5,47 @@ import "lib/ERC721A/contracts/ERC721A.sol";
 import {ERC2981} from "@openzeppelin/contracts/token/common/ERC2981.sol";
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {Pausable} from "@openzeppelin/contracts/utils/Pausable.sol";
-import {
-    ReentrancyGuard
-} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
-import {
-    MerkleProof
-} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 
 /*//////////////////////////////////////////////////////////////
                              CUSTOM ERRORS
-    //////////////////////////////////////////////////////////////*/
+//////////////////////////////////////////////////////////////*/
 /// @notice Thrown when zero address is used
 error InvalidAddress();
+
 /// @notice Thrown when URI is empty
 error InvalidURI();
+
 /// @notice Thrown when mint phase is not active
 error MintNotActive();
+
 /// @notice Thrown when incorrect ETH amount is sent or invalid quantity
 error InvalidAmount();
+
 /// @notice Thrown when mint exceeds max supply
 error InsufficientSupply();
 /// @notice Thrown when wallet exceeds mint limit
 error MintLimitExceeded();
+
 /// @notice Thrown when merkle proof is invalid
 error InvalidMerkleProof();
+
 /// @notice Thrown when ETH transfer fails
 error TransferFailed();
+
 /// @notice Thrown if reveal is attempted more than once
 error AlreadyRevealed();
+
 /// @notice Thrown if royalty fee is too high
 error RoyaltyTooHigh();
+
 /// @notice Thrown if tokenId not exists
 error TokenNotExists();
 
 /// @title NFTCollection
-/// @author teonomiMC - Natalia Bakakuri
+/// @author theonomiMC - Natalia Bakakuri
 /// @notice ERC721A NFT collection with whitelist + public mint and royalties
 /// @dev Uses ERC721A for gas-efficient batch minting and ERC2981 for royalties
 contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
@@ -51,10 +56,13 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /// @notice Maximum number of NFTs that can ever be minted
     uint256 private immutable maxSupply;
+
     /// @notice Price per NFT during whitelist mint
     uint256 public immutable whitelistMintCost;
+
     /// @notice Price per NFT during public mint
     uint256 public immutable publicMintCost;
+
     /// @notice Max NFTs a single wallet can mint (across all phases)
     uint256 public immutable maxMintPerAddress;
 
@@ -63,17 +71,22 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /// @notice Merkle root used to verify whitelist addresses
     bytes32 public merkleRoot;
+
     /// @notice URI returned before reveal
     string public hiddenURI;
+
     /// @dev Base URI for revealed tokens
     string private _baseTokenUri;
 
     /// @notice Whether metadata is revealed
     bool public isRevealed = false;
+
     /// @notice Whether whitelist mint is active
     bool public whitelistActive;
+
     /// @notice Whether public mint is active
     bool public publicMintActive;
+
     /// @notice Address that receives withdrawn funds
     address public recipient;
 
@@ -121,8 +134,9 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
         address _royaltyRecipient,
         uint96 _royaltyFee // e.g., 500 for 5%
     ) ERC721A(_name, _symbol) Ownable(_initialOwner) {
-        if (_initialOwner == address(0) || _royaltyRecipient == address(0))
+        if (_initialOwner == address(0) || _royaltyRecipient == address(0)) {
             revert InvalidAddress();
+        }
         if (_royaltyFee > 1000) revert RoyaltyTooHigh();
         if (_maxSupply == 0) revert InvalidAmount();
         if (bytes(_hiddenUri).length == 0) revert InvalidURI();
@@ -159,10 +173,7 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     /// @param _user Address to verify
     /// @param _proof Merkle proof
     /// @custom:reverts InvalidMerkleProof if proof is invalid
-    function _verifyWhitelist(
-        address _user,
-        bytes32[] calldata _proof
-    ) internal view {
+    function _verifyWhitelist(address _user, bytes32[] calldata _proof) internal view {
         bytes32 leaf = keccak256(abi.encodePacked(_user));
         if (!MerkleProof.verify(_proof, merkleRoot, leaf)) {
             revert InvalidMerkleProof();
@@ -176,11 +187,7 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     /// @custom:reverts InvalidAmount if quantity is zero or ETH is incorrect
     /// @custom:reverts InsufficientSupply if max supply exceeded
     /// @custom:reverts MintLimitExceeded if wallet limit exceeded
-    function _mintInternal(
-        address to,
-        uint256 _quantity,
-        uint256 _cost
-    ) internal {
+    function _mintInternal(address to, uint256 _quantity, uint256 _cost) internal {
         if (_quantity == 0) revert InvalidAmount();
         if (msg.value != _quantity * _cost) revert InvalidAmount();
 
@@ -202,10 +209,7 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     /// @notice Mint NFTs during whitelist phase
     /// @param quantity Number of NFTs to mint
     /// @param proof Merkle proof proving whitelist inclusion
-    function whitelistMint(
-        uint256 quantity,
-        bytes32[] calldata proof
-    ) external payable whenNotPaused nonReentrant {
+    function whitelistMint(uint256 quantity, bytes32[] calldata proof) external payable whenNotPaused nonReentrant {
         if (!whitelistActive) revert MintNotActive();
         _verifyWhitelist(msg.sender, proof);
         _mintInternal(msg.sender, quantity, whitelistMintCost);
@@ -215,9 +219,7 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
 
     /// @notice Mint NFTs during public sale
     /// @param quantity Number of NFTs to mint
-    function publicMint(
-        uint256 quantity
-    ) external payable whenNotPaused nonReentrant {
+    function publicMint(uint256 quantity) external payable whenNotPaused nonReentrant {
         if (!publicMintActive) revert MintNotActive();
         _mintInternal(msg.sender, quantity, publicMintCost);
 
@@ -264,9 +266,7 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
 
     /// @notice Withdraw all ETH to recipient
     function withdraw() external nonReentrant onlyOwner {
-        (bool success, ) = payable(recipient).call{
-            value: address(this).balance
-        }("");
+        (bool success,) = payable(recipient).call{value: address(this).balance}("");
         if (!success) revert TransferFailed();
     }
 
@@ -275,17 +275,12 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     //////////////////////////////////////////////////////////////*/
     /// @notice Returns metadata URI for a token
     /// @param tokenId Token ID
-    function tokenURI(
-        uint256 tokenId
-    ) public view virtual override returns (string memory) {
+    function tokenURI(uint256 tokenId) public view virtual override returns (string memory) {
         if (!_exists(tokenId)) revert TokenNotExists();
 
         if (!isRevealed) return hiddenURI;
 
-        return
-            string(
-                abi.encodePacked(_baseTokenUri, tokenId.toString(), ".json")
-            );
+        return string(abi.encodePacked(_baseTokenUri, tokenId.toString(), ".json"));
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -297,12 +292,8 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
     }
 
     /// @dev Supports ERC165 interface detection
-    function supportsInterface(
-        bytes4 interfaceId
-    ) public view virtual override(ERC721A, ERC2981) returns (bool) {
-        return
-            ERC721A.supportsInterface(interfaceId) ||
-            ERC2981.supportsInterface(interfaceId);
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC721A, ERC2981) returns (bool) {
+        return ERC721A.supportsInterface(interfaceId) || ERC2981.supportsInterface(interfaceId);
     }
 
     /// @notice Returns total number of minted tokens

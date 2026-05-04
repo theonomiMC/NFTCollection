@@ -6,6 +6,7 @@ import {
     NFTStaking,
     NFTStaking_NoReward,
     NFTStaking_InvalidAddress,
+    NFTStaking_BatchTooLarge,
     NFTStaking_InvalidAmount,
     NFTStaking_EmptyArray,
     NFTStaking_AlreadyStaked,
@@ -26,27 +27,25 @@ contract NFTStakingTest is BaseTest {
         assertEq(staking.accRewardPerShare(), 0);
         assertEq(staking.lastUpdateTime(), block.timestamp);
 
-        assertTrue(staking.hasRole(staking.DEFAULT_ADMIN_ROLE(), admin));
-        assertTrue(staking.hasRole(staking.REWARD_MANAGER_ROLE(), admin));
+        assertTrue(staking.hasRole(staking.DEFAULT_ADMIN_ROLE(), multisig));
+        assertTrue(staking.hasRole(staking.REWARD_MANAGER_ROLE(), multisig));
     }
+
     function test_Constructor_ZeroAdminAddress_Reverts() public {
         vm.expectRevert(NFTStaking_InvalidAddress.selector);
-        new NFTStaking(
-            address(0),
-            address(nft),
-            address(rewardToken),
-            REWARD_RATE
-        );
+        new NFTStaking(address(0), address(nft), address(rewardToken), REWARD_RATE);
     }
+
     function test_Constructor_ZeroRewardTokenAddress_Reverts() public {
         vm.expectRevert(NFTStaking_InvalidAddress.selector);
-        new NFTStaking(admin, address(nft), address(0), REWARD_RATE);
+        new NFTStaking(multisig, address(nft), address(0), REWARD_RATE);
     }
 
     function test_Constructor_ZeroRewardRate_Reverts() public {
         vm.expectRevert(NFTStaking_InvalidAmount.selector);
-        new NFTStaking(admin, address(nft), address(rewardToken), 0);
+        new NFTStaking(multisig, address(nft), address(rewardToken), 0);
     }
+
     function test_Stake_SingleNFT_UpdatesState() public {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 1;
@@ -60,6 +59,7 @@ contract NFTStakingTest is BaseTest {
         assertEq(staking.stakedTokensOf(toko).length, 1);
         assertEq(staking.stakedTokensOf(toko)[0], 1);
     }
+
     function test_claimReward_singleUser() public {
         uint256[] memory tokenIds = new uint256[](2);
         tokenIds[0] = 1;
@@ -76,6 +76,48 @@ contract NFTStakingTest is BaseTest {
         assertEq(staking.balanceOf(toko), 2);
         assertEq(staking.totalStaked(), 2);
     }
+
+    function test_Stake_BatchTooLarge_Reverts() public {
+        uint256[] memory ids = new uint256[](staking.MAX_BATCH_SIZE() + 1);
+
+        uint256 currentTokenId = 7;
+
+        for (uint256 i = 0; i < 6; i++) {
+            address fakeWallet = address(uint160(i + 100));
+            vm.deal(fakeWallet, 5 ether);
+
+            uint256 mintAmount = i == 5 ? 1 : 10;
+
+            vm.prank(fakeWallet);
+            nft.publicMint{value: 0.02 ether * mintAmount}(mintAmount);
+
+            vm.startPrank(fakeWallet);
+            for (uint256 j = 0; j < mintAmount; j++) {
+                nft.transferFrom(fakeWallet, toko, currentTokenId);
+                ids[j] = currentTokenId;
+                currentTokenId++;
+            }
+            vm.stopPrank();
+        }
+        vm.startPrank(toko);
+        nft.setApprovalForAll(address(staking), true);
+        vm.expectRevert(NFTStaking_BatchTooLarge.selector);
+        staking.stake(ids);
+        vm.stopPrank();
+    }
+
+    function test_Unstake_BatchTooLarge_Reverts() public {
+        uint256[] memory ids = new uint256[](staking.MAX_BATCH_SIZE() + 1);
+
+        for (uint256 i = 0; i < ids.length; i++) {
+            ids[i] = i + 1;
+        }
+
+        vm.prank(toko);
+        vm.expectRevert(NFTStaking_BatchTooLarge.selector);
+        staking.stake(ids);
+    }
+
     function test_rewardAccount() public {
         uint256[] memory tokoIds = new uint256[](1);
         tokoIds[0] = 1;
@@ -92,11 +134,13 @@ contract NFTStakingTest is BaseTest {
         assertEq(staking.earned(toko), 100);
         assertEq(staking.earned(noa), 0);
     }
+
     function test_Stake_EmptyArray_Reverts() public {
         vm.prank(toko);
         vm.expectRevert(NFTStaking_EmptyArray.selector);
         staking.stake(new uint256[](0));
     }
+
     function test_Stake_NotOwner_Reverts() public {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 1; // this nft is minted for Toko
@@ -107,6 +151,7 @@ contract NFTStakingTest is BaseTest {
 
         assertEq(nft.ownerOf(1), toko);
     }
+
     function test_Unstake_SingleNFT_UpdatesStateAndReturnsOwnership() public {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 1;
@@ -133,6 +178,7 @@ contract NFTStakingTest is BaseTest {
         vm.expectRevert(NFTStaking_NotOwner.selector);
         staking.unstake(tokenIds);
     }
+
     function test_Stake_AlreadyStaked_Reverts() public {
         uint256[] memory ids = new uint256[](1);
         ids[0] = 1;
@@ -142,6 +188,7 @@ contract NFTStakingTest is BaseTest {
         vm.expectRevert(NFTStaking_AlreadyStaked.selector);
         staking.stake(ids);
     }
+
     function test_Claim_NoRewards_Reverts() public {
         uint256[] memory tokenIds = new uint256[](1);
         tokenIds[0] = 4;
@@ -152,6 +199,7 @@ contract NFTStakingTest is BaseTest {
         vm.expectRevert(NFTStaking_NoReward.selector);
         staking.claim();
     }
+
     function test_Stake_MultipleNFTs_UpdatesState() public {
         uint256[] memory ids = new uint256[](2);
         ids[0] = 1;
@@ -166,6 +214,7 @@ contract NFTStakingTest is BaseTest {
         assertEq(nft.ownerOf(2), address(staking));
         assertEq(staking.totalStaked(), 2);
     }
+
     function test_Unstake_UpdatesEnumeration_WithSwapAndPop() public {
         uint256[] memory ids = new uint256[](3);
         ids[0] = 1;
@@ -188,6 +237,7 @@ contract NFTStakingTest is BaseTest {
         assertEq(remaining.length, 2);
         assertEq(staking.stakerOf(2), address(0));
     }
+
     function test_Claim_SingleUser_LeavesStakeStateUnchanged() public {
         uint256[] memory ids = new uint256[](1);
         ids[0] = 1;
@@ -230,9 +280,8 @@ contract NFTStakingTest is BaseTest {
         assertEq(staking.earned(toko), 150);
         assertEq(staking.earned(noa), 50);
     }
-    function test_Accounting_RewardRateChange_AffectsOnlyFutureRewards()
-        public
-    {
+
+    function test_Accounting_RewardRateChange_AffectsOnlyFutureRewards() public {
         uint256[] memory ids = new uint256[](1);
         ids[0] = 1;
 
@@ -240,33 +289,37 @@ contract NFTStakingTest is BaseTest {
 
         _warp(10 seconds);
 
-        vm.prank(admin);
+        vm.prank(multisig);
         staking.setRewardPerSecond(20);
 
         _warp(10 seconds);
 
         assertEq(staking.earned(toko), 300);
     }
+
     // REWARD RATE
     function test_SetRewardPerSecond_UpdatesRate() public {
         uint256 newRate = 20;
 
-        vm.prank(admin);
+        vm.prank(multisig);
         staking.setRewardPerSecond(newRate);
 
         assertEq(staking.rewardsPerSecond(), newRate);
     }
+
     function test_SetRewardPerSecond_ZeroAmount_Reverts() public {
-        vm.prank(admin);
+        vm.prank(multisig);
         // Add the custom error selector check once you import it
         vm.expectRevert(NFTStaking_InvalidAmount.selector);
         staking.setRewardPerSecond(0);
     }
+
     function test_SetRewardPerSecond_NotManager_Reverts() public {
         vm.prank(toko);
         vm.expectRevert();
         staking.setRewardPerSecond(20);
     }
+
     function test_ZeroBalance_PendingRewards() public {
         uint256[] memory ids = new uint256[](1);
         ids[0] = 1;
@@ -277,14 +330,16 @@ contract NFTStakingTest is BaseTest {
 
         assertEq(staking.pendingRewards(toko), staking.earned(toko));
     }
+
     function test_UpdatePool_ZeroStaked() public {
         _warp(10 seconds);
-        
-        vm.prank(admin);
+
+        vm.prank(multisig);
         staking.setRewardPerSecond(20);
-        
+
         assertEq(staking.lastUpdateTime(), block.timestamp);
     }
+
     function test_DirectNFTTransfer_CreatesUntrackedStuckNFT() public {
         uint256 tokenId = 1;
 
@@ -293,6 +348,5 @@ contract NFTStakingTest is BaseTest {
         vm.prank(toko);
         vm.expectRevert(NFTStaking_DirectTransferNotAllowed.selector);
         nft.safeTransferFrom(toko, address(staking), tokenId);
-
     }
 }
