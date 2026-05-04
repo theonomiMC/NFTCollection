@@ -8,9 +8,9 @@
 
 A production-oriented Solidity project implementing an NFT collection and a staking-based reward distribution system.
 
-*   **NFTCollection:** [`0xEE2BC4Bea4F5193EB12947a5E4F7CC9D3d26fdBf`](https://sepolia.etherscan.io/address/0xEE2BC4Bea4F5193EB12947a5E4F7CC9D3d26fdBf#code)
-*   **GovernanceToken:** [`0xad6D988db1F9b695276080BF24D95CB2F7A8c7EA`](https://sepolia.etherscan.io/address/0xad6D988db1F9b695276080BF24D95CB2F7A8c7EA#code)
-*   **NFTStaking:** [`0x99b8522Fd6c282f34E5B5af57B18044C88d12c37`](https://sepolia.etherscan.io/address/0x99b8522Fd6c282f34E5B5af57B18044C88d12c37#code)
+*   **NFTCollection:** [`0x6CA691947f144b33135889b7855e47D30a56c90F`](https://sepolia.etherscan.io/address/0x6CA691947f144b33135889b7855e47D30a56c90F#code)
+*   **GovernanceToken:** [`0x380E2C6613d99461f47e522f3DE17914d46e2546`](https://sepolia.etherscan.io/address/0x380E2C6613d99461f47e522f3DE17914d46e2546#code)
+*   **NFTStaking:** [`0x8D2a23889f0A677Ee13C2E66f16aA931AeaE25A5`](https://sepolia.etherscan.io/address/0x8D2a23889f0A677Ee13C2E66f16aA931AeaE25A5#code)
 
 
 ## 📌 Overview

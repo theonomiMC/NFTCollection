@@ -29,10 +29,7 @@ contract Deploy is Script {
         console2.log("NFTCollection deployed at:", address(nft));
 
         // 2. Deploy Governance token
-        GovernanceToken rewardToken = new GovernanceToken(
-            1000 ether,
-            initialOwner
-        );
+        GovernanceToken rewardToken = new GovernanceToken(10_000_000 ether, initialOwner);
         console2.log("GovernanceToken deployed at:", address(rewardToken));
 
         // 3. Deploy Staking contract
@@ -40,7 +37,7 @@ contract Deploy is Script {
             initialOwner,
             address(nft),
             address(rewardToken),
-            10 // rewardsPerSecond
+            10000000000000000 // rewardsPerSecond
         );
         console2.log("NFTStaking deployed at:", address(staking));
 
