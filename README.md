@@ -23,6 +23,8 @@ This project consists of three core components:
 
 The system allows users to stake NFTs and earn rewards over time using a gas-efficient accumulator-based model.
 
+## [Live Demo](https://nft-collection-ui-snowy.vercel.app/)
+
 ---
 
 ## 🧱 Contracts
