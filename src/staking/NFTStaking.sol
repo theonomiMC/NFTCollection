@@ -156,6 +156,10 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
         _updatePool();
         _settle(msg.sender);
 
+        balanceOf[msg.sender] += len;
+        totalStaked += len;
+        rewardCheckpoint[msg.sender] = (balanceOf[msg.sender] * accRewardPerShare) / PRECISION;
+
         for (uint256 i; i < len;) {
             uint256 tokenId = tokenIds[i];
 
@@ -184,9 +188,6 @@ contract NFTStaking is AccessControl, ReentrancyGuard, IERC721Receiver {
                 ++i;
             }
         }
-        balanceOf[msg.sender] += len;
-        totalStaked += len;
-        rewardCheckpoint[msg.sender] = (balanceOf[msg.sender] * accRewardPerShare) / PRECISION;
     }
 
     /// @notice Unstakes one or more NFTs and returns them to the caller.

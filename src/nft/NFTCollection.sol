@@ -264,6 +264,22 @@ contract NFTCollection is ERC721A, ERC2981, Ownable, Pausable, ReentrancyGuard {
         isRevealed = true;
     }
 
+    /// @notice Set new base URI for revealed tokens
+    /// @param baseURI New base URI
+    function setBaseURI(string calldata baseURI) external onlyOwner {
+        if (bytes(baseURI).length == 0) revert InvalidURI();
+        _baseTokenUri = baseURI;
+    }
+
+    /// @notice Set new royalty information
+    /// @param receiver Address receiving royalties
+    /// @param feeNumerator Royalty fee in basis points (e.g., 500 = 5%)
+    function setRoyaltyInfo(address receiver, uint96 feeNumerator) external onlyOwner {
+        if (receiver == address(0)) revert InvalidAddress();
+        if (feeNumerator > 1000) revert RoyaltyTooHigh();
+        _setDefaultRoyalty(receiver, feeNumerator);
+    }
+
     /// @notice Withdraw all ETH to recipient
     function withdraw() external nonReentrant onlyOwner {
         (bool success,) = payable(recipient).call{value: address(this).balance}("");

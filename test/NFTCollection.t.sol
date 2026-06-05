@@ -452,6 +452,61 @@ contract NFTCollectionTest is BaseTest {
         nft.withdraw();
         vm.stopPrank();
     }
+
+    // setBaseURI and setRoyaltyInfo tests
+    function test_SetBaseURI_AsAdmin_Succeeds() public {
+        string memory newBaseUri = "ipfs://new-revealed-uri/";
+
+        vm.startPrank(multisig);
+        nft.reveal("ipfs://temp/");
+        nft.setBaseURI(newBaseUri);
+        vm.stopPrank();
+
+        uint256 tokenId = 1;
+        assertEq(nft.tokenURI(tokenId), "ipfs://new-revealed-uri/1.json");
+    }
+
+    function test_SetBaseURI_AsNotAdmin_Reverts() public {
+        vm.prank(toko);
+        vm.expectRevert(); // Ownable revert
+        nft.setBaseURI("ipfs://new-revealed-uri/");
+    }
+
+    function test_SetBaseURI_EmptyBaseUri_Reverts() public {
+        vm.prank(multisig);
+        vm.expectRevert(InvalidURI.selector);
+        nft.setBaseURI("");
+    }
+
+    function test_SetRoyaltyInfo_AsAdmin_Succeeds() public {
+        address newReceiver = makeAddr("new-royalty-receiver");
+        uint96 newFeeNumerator = 250; // 2.5%
+
+        vm.prank(multisig);
+        nft.setRoyaltyInfo(newReceiver, newFeeNumerator);
+
+        (address receiver, uint256 royaltyAmount) = nft.royaltyInfo(1, 1 ether);
+        assertEq(receiver, newReceiver);
+        assertEq(royaltyAmount, 0.025 ether);
+    }
+
+    function test_SetRoyaltyInfo_AsNotAdmin_Reverts() public {
+        vm.prank(toko);
+        vm.expectRevert(); // Ownable revert
+        nft.setRoyaltyInfo(makeAddr("new-royalty-receiver"), 250);
+    }
+
+    function test_SetRoyaltyInfo_ZeroAddress_Reverts() public {
+        vm.prank(multisig);
+        vm.expectRevert(InvalidAddress.selector);
+        nft.setRoyaltyInfo(address(0), 500);
+    }
+
+    function test_SetRoyaltyInfo_TooHigh_Reverts() public {
+        vm.prank(multisig);
+        vm.expectRevert(RoyaltyTooHigh.selector);
+        nft.setRoyaltyInfo(makeAddr("new-royalty-receiver"), 1001); // 10.01%
+    }
 }
 
 contract BadReceiver {
